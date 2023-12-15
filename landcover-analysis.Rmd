@@ -6,13 +6,13 @@ from MEDS course: eds223 week 9 lab
 
 Monitoring the distribution and change in land cover types can help us understand the impacts of phenomena like climate change, natural disasters, deforestation, and urbanization. Determining land cover types over large areas is a major application of remote sensing because we are able to distinguish different materials based on their spectral reflectance.
 
-Classifying remotely sensed imagery into landcover classes enables us to understand the distribution and change in landcover types over large areas. There are many approaches for performing landcover classification -- *supervised* approaches use training data labeled by the user, whereas *unsupervised* approaches use algorithms to create groups which are identified by the user afterward.\
+Classifying remotely sensed imagery into landcover classes enables us to understand the distribution and change in landcover types over large areas. There are many approaches for performing landcover classification -- supervised approaches use training data labeled by the user, whereas unsupervised approaches use algorithms to create groups which are identified by the user afterward.
 
 credit: this lab is based on a materials developed by Chris Kibler.
 
 # Task
 
-In this lab, we are using a form of supervised classification, a *decision tree classifier*. [Decision trees](https://medium.com/@ml.at.berkeley/machine-learning-crash-course-part-5-decision-trees-and-ensemble-models-dcc5a36af8cd) classify pixels using a series of conditions based on values in spectral bands. These conditions (or decisions) are developed based on training data. In this lab we will create a land cover classification for southern Santa Barbara County based on multi-spectral imagery and data on the location of 4 land cover types:
+To use a form of supervised classification, a decision tree classifier. [Decision trees](https://medium.com/@ml.at.berkeley/machine-learning-crash-course-part-5-decision-trees-and-ensemble-models-dcc5a36af8cd) classify pixels using a series of conditions based on values in spectral bands. These conditions (or decisions) are developed based on training data. To create a land cover classification for southern Santa Barbara County based on multi-spectral imagery and data on the location of 4 land cover types:
 
 -   green vegetation\
 -   dry grass or soil\
@@ -52,9 +52,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Load packages and set working directory
 
-We'll be working with vector and raster data, so will need both `sf` and `terra`. To train our classification algorithm and plot the results, we'll use the `rpart` and `rpart.plot` packages. Set your working directory to the folder that holds the data for this lab.\
-
-**Note:** my filepaths may look different than yours!
+Will need both `sf` and `terra` to work with vector and raster data. The `rpart` and `rpart.plot` packages will be used to train the classification algorithm and plot the results.\
 
 ```{r include=TRUE, message=FALSE, warning=FALSE}
 library(sf)
@@ -66,18 +64,15 @@ library(rpart.plot)
 library(tmap)
 
 rm(list = ls())
-
-here::i_am("MEDS/Course/eds223-geospatial/labs/week-9/week9-template.Rmd")
-setwd(here())
 ```
 
 #### Load Landsat data
 
-Let's create a raster stack based on the 6 bands we will be working with. Each file name ends with the band number (e.g. `B1.tif`). Notice that we are missing a file for band 6. Band 6 corresponds to thermal data, which we will not be working with for this lab. To create a raster stack, we will create a list of the files that we would like to work with and read them all in at once using the `rast` function. We'll then update the names of the layers to match the spectral bands and plot a true color image to see what we're working with.
+Create a raster stack based on the 6 bands to work with. Each file name ends with the band number (e.g. `B1.tif`).
 
 ```{r include=TRUE}
 # list files for each band, including the full file path
-filelist <- list.files("./landsat-data/", full.names = TRUE)
+filelist <- list.files("./data/landsat-data/", full.names = TRUE)
 
 filelist
 # read in and store as a raster stack
@@ -89,19 +84,20 @@ landsat
 names(landsat) <- c('blue','green','red','NIR','SWIR1','SWIR2')
 
 landsat
+
 # plot true color image
 
-plotRGB(landsat, r = 3, g = 2, blue = 1, stretch = 'lin')
+plotRGB(landsat, r = 3, g = 2, b = 1, stretch = 'lin')
 ```
 
 #### Load study area
 
-We want to contstrain our analysis to the southern portion of the county where we have training data, so we'll read in a file that defines the area we would like to study.
+Constrain the analysis to the southern portion of the county to match the location of training data.
 
 ```{r include=TRUE}
 
 # read in shapefile for southern portion of SB county
-SB_county_south <- st_read("./SB_county_south.shp")
+SB_county_south <- st_read("./data/studyarea_training-data/SB_county_south.shp")
 
 # project to match the Landsat data
 SB_county_south <- st_transform(SB_county_south, crs = st_crs(landsat))
@@ -123,8 +119,6 @@ landsat_masked <- mask(landsat_cropped, SB_county_south)
 
 # remove unnecessary object from environment
 rm(landsat, landsat_cropped, SB_county_south) #keeping only the masked data
-
-plotRGB(landsat_masked, r = 3, g = 2, blue = 1, stretch = 'lin')
 ```
 
 #### Convert Landsat values to reflectance
@@ -148,7 +142,7 @@ landsat <- (landsat * 0.0000275 - 0.2)*100
 
 # plot true color image to check results
 
-plotRGB(landsat, r = 3, g = 2, blue = 1, stretch = 'lin')
+plotRGB(landsat, r = 3, g = 2, b = 1, stretch = 'lin')
 
 # check values are 0 - 100
 
@@ -164,7 +158,7 @@ We will load the shapefile identifying different locations within our study area
 
 ```{r include=TRUE}
 # read in and transform training data
-training_data <- st_read("./trainingdata.shp") %>% 
+training_data <- st_read("./data/studyarea_training-data/trainingdata.shp") %>% 
   st_transform(., crs = st_crs(landsat)) #'.,' the dot is there in place of the data input, stylistic placeholder. not needed
 
 # extract reflectance values at training sites
